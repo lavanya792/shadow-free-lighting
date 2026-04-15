@@ -2,36 +2,102 @@
 <html>
 
 <head>
-    <title>Intelligent Lighting Analyzer (Advanced)</title>
+    <title>Shadow-Free Intelligent Lighting</title>
+
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: black;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+        }
+
+        #header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            max-width: 60%;
+        }
+
+        #header p {
+            font-size: 12px;
+            opacity: 0.7;
+            margin: 2px 0 0;
         }
 
         #info {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            font-family: Arial;
+            top: 90px;
+            left: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            font-size: 14px;
+        }
+
+        /* ✅ FIXED CONTROL PANEL (NO OVERLAP NOW) */
+        .dg {
+            position: fixed !important;
+
+            top: 120px !important;
+            /* 🔥 KEY FIX */
+            right: 20px !important;
+
+            width: 260px !important;
+            transform: scale(1) !important;
+
+            background: rgba(0, 0, 0, 0.8) !important;
+            border-radius: 12px !important;
+
+            backdrop-filter: blur(10px);
+
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+
+            z-index: 9999 !important;
+        }
+
+        .dg .cr {
+            width: 100% !important;
+        }
+
+        .dg .main {
+            overflow: hidden !important;
+        }
+
+        .dg .close-button {
+            display: none !important;
+        }
+
+        #divider {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: 10;
         }
     </style>
 </head>
 
 <body>
 
+    <div id="header">
+        Shadow-Free Intelligent Lighting
+        <p>Real-time lighting optimization using linear algebra</p>
+    </div>
+
     <div id="info">Loading...</div>
+    <div id="divider"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dat.gui/build/dat.gui.min.js"></script>
 
     <script>
-
-        // ================= MATH =================
 
         function normalize(v) {
             let len = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -66,22 +132,17 @@
             return normalize(avg);
         }
 
-        // ================= RENDERER =================
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.setScissorTest(true);
         document.body.appendChild(renderer.domElement);
 
-        // ================= SCENES =================
-
-        const scene1 = new THREE.Scene(); // RAW
-        const scene2 = new THREE.Scene(); // OPTIMIZED
+        const scene1 = new THREE.Scene();
+        const scene2 = new THREE.Scene();
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(4, 4, 6);
-
-        // ================= FLOOR HEATMAP =================
+        camera.position.set(0, 3, 4);
 
         function createFloor() {
             const geo = new THREE.PlaneGeometry(10, 10, 50, 50);
@@ -105,8 +166,6 @@
             return floor;
         }
 
-        // ================= SCENE BUILDER =================
-
         function createScene(scene) {
 
             const floor = createFloor();
@@ -118,16 +177,24 @@
 
             scene.add(new THREE.AmbientLight(0x404040));
 
-            // Multiple objects
-            for (let i = 0; i < 6; i++) {
+            const positions = [
+                [-1, 0.5, -1],
+                [1, 0.5, -1],
+                [-1, 0.5, 1],
+                [1, 0.5, 1],
+                [0, 0.5, 0],
+                [0, 0.5, -2]
+            ];
+
+            positions.forEach(p => {
                 let box = new THREE.Mesh(
                     new THREE.BoxGeometry(),
                     new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff })
                 );
-                box.position.set(Math.random() * 4 - 2, 0.5, Math.random() * 4 - 2);
+                box.position.set(...p);
                 box.castShadow = true;
                 scene.add(box);
-            }
+            });
 
             return { light, floor };
         }
@@ -135,12 +202,7 @@
         const s1 = createScene(scene1);
         const s2 = createScene(scene2);
 
-        // ================= UI =================
-
-        const params = {
-            x: 1, y: 2, z: 1,
-            mode: "projection"
-        };
+        const params = { x: 1, y: 2, z: 1, mode: "projection" };
 
         const gui = new dat.GUI();
         gui.add(params, 'x', -5, 5);
@@ -148,48 +210,32 @@
         gui.add(params, 'z', -5, 5);
         gui.add(params, 'mode', ["raw", "projection", "leastSquares", "auto"]);
 
-        // ================= TARGETS =================
-
         const targets = [
             { x: 1, y: 1, z: 0 },
             { x: 0, y: 1, z: 1 },
             { x: 1, y: 0.5, z: 1 }
         ];
 
-        // ================= TRAIL =================
-
-        const trailPoints = [];
-        const trailGeo = new THREE.BufferGeometry();
-        const trailMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        const trail = new THREE.Line(trailGeo, trailMat);
-        scene2.add(trail);
-
-        // ================= CAMERA MOTION =================
-
         let t = 0;
 
         function updateCamera() {
             t += 0.01;
-            camera.position.x = Math.sin(t) * 6;
-            camera.position.z = Math.cos(t) * 6;
-            camera.lookAt(0, 0, 0);
+            let r = 4;
+            camera.position.x = Math.sin(t) * r;
+            camera.position.z = Math.cos(t) * r;
+            camera.position.y = 3;
+            camera.lookAt(0, 0.5, 0);
         }
-
-        // ================= HEATMAP =================
 
         function updateHeatmap(floor, intensity) {
             let col = floor.geometry.attributes.color;
-
             for (let i = 0; i < col.count; i++) {
                 col.setX(i, 1 - intensity);
                 col.setY(i, intensity);
                 col.setZ(i, 0);
             }
-
             col.needsUpdate = true;
         }
-
-        // ================= LOOP =================
 
         function animate() {
             requestAnimationFrame(animate);
@@ -212,9 +258,7 @@
 
             let L_opt = L;
 
-            if (params.mode === "projection") {
-                L_opt = project(L, basis);
-            }
+            if (params.mode === "projection") L_opt = project(L, basis);
 
             if (params.mode === "leastSquares") {
                 let best = leastSquares(targets);
@@ -224,42 +268,32 @@
             if (params.mode === "auto") {
                 let best = leastSquares(targets);
                 let target = project(best, basis);
-
                 L.x += (target.x - L.x) * 0.05;
                 L.y += (target.y - L.y) * 0.05;
                 L.z += (target.z - L.z) * 0.05;
-
                 L_opt = L;
             }
 
-            // Apply lights
             s1.light.position.set(L.x * 5, L.y * 5, L.z * 5);
             s2.light.position.set(L_opt.x * 5, L_opt.y * 5, L_opt.z * 5);
 
-            // Intensities
-            let N = { x: 0, y: 1, z: 0 };
-            let I_raw = Math.max(0, dot(L, N));
-            let I_opt = Math.max(0, dot(L_opt, N));
+            let I_raw = Math.max(0, dot(L, { x: 0, y: 1, z: 0 }));
+            let I_opt = Math.max(0, dot(L_opt, { x: 0, y: 1, z: 0 }));
 
             updateHeatmap(s1.floor, I_raw);
             updateHeatmap(s2.floor, I_opt);
 
-            // Trail
-            trailPoints.push(new THREE.Vector3(L_opt.x * 5, L_opt.y * 5, L_opt.z * 5));
-            if (trailPoints.length > 100) trailPoints.shift();
-            trailGeo.setFromPoints(trailPoints);
-
-            // Info
             document.getElementById("info").innerHTML =
-                "RAW: " + I_raw.toFixed(2) +
-                "<br>OPTIMIZED: " + I_opt.toFixed(2) +
-                "<br>MODE: " + params.mode;
+                `<b>RAW:</b> ${I_raw.toFixed(2)}<br>
+             <b>OPTIMIZED:</b> ${I_opt.toFixed(2)}<br>
+             <b>MODE:</b> ${params.mode}`;
 
-            // Split screen
             renderer.setViewport(0, 0, window.innerWidth / 2, window.innerHeight);
+            renderer.setScissor(0, 0, window.innerWidth / 2, window.innerHeight);
             renderer.render(scene1, camera);
 
             renderer.setViewport(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+            renderer.setScissor(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
             renderer.render(scene2, camera);
         }
 
