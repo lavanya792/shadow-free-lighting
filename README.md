@@ -2,21 +2,14 @@
 
 > Light, but optimized.
 
-This project uses **linear algebra** to control and improve lighting in a 3D scene.  
-Instead of placing light manually, we treat it as a **vector** and optimize it in real time.
+A real-time 3D lighting system that uses **linear algebra** to improve illumination quality.  
+Instead of placing lights manually, light is treated as a **vector** and optimized dynamically.
 
 ## ✨ Features
 - Split screen: Raw vs Optimized lighting  
-- Heatmap visualization of lighting quality  
+- Heatmap visualization  
 - Real-time light adjustment  
-- Intelligent optimization using projection & least squares  
-
-## 🧠 Core Idea
-Lighting is computed using:
-
-- Dot Product → measures illumination  
-- Projection → removes bad directions  
-- Optimization → finds best light direction  
+- Projection & least-squares optimization  
 
 ## 🌐 Live Demo
 https://lavanya792.github.io/shadow-free-lighting/
